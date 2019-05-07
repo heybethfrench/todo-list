@@ -19,6 +19,67 @@ class Task(db.Model):
         self.completed = False
 
 
+class User(db.Model):
+
+    id = db.Column(db.Integer, primary_key = True)
+    email = db.Column(db.String(120), unique = True)
+    password = db.Column(db.String(120))
+
+    def __init__(self, email, password):
+        self.email = email
+        self.password = password
+
+
+@app.route('/register')
+def register():
+
+    if request.method == 'POST':
+        email = request.form['email']
+        password = request.form['password']
+        verify = request.form['verify']
+        
+        #TODO validate user's data
+
+        existing_user = User.query.filter_by(email=email).first()
+
+        if not existing_user:
+            new_user = User(email=email).first()
+            db.session.add(new_user)
+            db.session.commit()
+
+            #TODO remember the user
+            
+            return redirect('/')
+        
+        else:
+            
+            #TODO user beter response messaging
+            return "<h1>Duplicate user</h1>"
+
+
+    return render_template('register.html')
+
+
+
+@app.route('/login', methods=['POST', 'GET'])
+def login():
+    
+    if request.method == 'POST':
+        email = request.form['email']
+        password = request.form['password']
+        user = User.query.filter_by(email=email).first()
+
+        if user and user.password == password:
+            #TODO - remember that the user has logged in
+            return redirect('/')
+
+        else:
+            #TODO - explain why login failed
+            PASS
+
+    return render_template('login.html')
+
+
 @app.route('/', methods = ['POST', 'GET'])
 def index():
 
@@ -31,6 +92,8 @@ def index():
     tasks = Task.query.filter_by(completed=False).all()
     completed_tasks = Task.query.filter_by(completed=True).all()
     return render_template('todos.html',title="Get It Done!", tasks=tasks, completed_tasks=completed_tasks)
+
+
 
 
 @app.route('/delete-task', methods=['POST'])
