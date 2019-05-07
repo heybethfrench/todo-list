@@ -1,11 +1,12 @@
 from flask_sqlalchemy import SQLAlchemy
-from flask import Flask, request, redirect, render_template
+from flask import Flask, request, redirect, render_template, session, flash
 
 app = Flask(__name__)
 app.config['DEBUG'] = True
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://get-it-done:heywedidit@localhost:8889/get-it-done'
 app.config['SQLALCHEMY_ECHO'] = True
 db = SQLAlchemy(app)
+app.secret_key = 'superdupersecretkey'
 
 
 class Task(db.Model):
@@ -29,6 +30,11 @@ class User(db.Model):
         self.email = email
         self.password = password
 
+@app.before_request
+def require_login():
+    allowed_routes = ['login', 'register']
+    if request.endpoint not in allowed_routes and 'email' not in session:
+        return redirect('/login')
 
 @app.route('/register')
 def register():
@@ -46,13 +52,12 @@ def register():
             new_user = User(email=email).first()
             db.session.add(new_user)
             db.session.commit()
-
-            #TODO remember the user
-            
+            session['email'] = email
+            flash("Logged in")
             return redirect('/')
         
         else:
-            
+            flash('User password incorrect, or user does not exist')
             #TODO user beter response messaging
             return "<h1>Duplicate user</h1>"
 
@@ -68,16 +73,22 @@ def login():
         email = request.form['email']
         password = request.form['password']
         user = User.query.filter_by(email=email).first()
-
+        session['email'] = email
         if user and user.password == password:
             #TODO - remember that the user has logged in
             return redirect('/')
 
         else:
             #TODO - explain why login failed
-            PASS
+            return '<h1>error</h1>'
 
     return render_template('login.html')
+
+@app.route('/logout')
+def logout():
+    
+    del session['email']
+    return redirect('/')
 
 
 @app.route('/', methods = ['POST', 'GET'])
